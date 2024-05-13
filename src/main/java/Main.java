@@ -29,29 +29,7 @@ import Repository.MatchOrderRepository;
 public class Main {
     public static void main(String[] args) {
         System.out.println(Paths.get("").toAbsolutePath());
-        // track orders rejected
-        // track client data
-        // track data for each instrument order
-        // ----
-//        ClientReader cReader = new ClientReader();
-//        OrderReader oReader = new OrderReader();
-//
-//        List<OrderData> orders = new ArrayList<OrderData>();
-//        List<ClientData> clients = new ArrayList<ClientData>();
-//        // read data from files
-//        // implement policy checking
-//        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, false);
-//        clients = cReader.readFrom(false);
-//        // implement policy checking functions
-//        // check at end of auction
-//        // check at every action in continuous
-//
-//        // perform open action simulation
-//        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients);
-//        System.out.println("Out Auction Output: " + matchOrdersRepository.matchOrders());
-//        // assumption: Auction has ended
 
-        // perform continuous action simulation
         var clientData = ClientReader.readFrom(true);
         var instrumentData = InstrumentReader.readFrom(true);
         var orderData = OrderReader.readFrom(OrderReader.OrderPeriod.Continuous, true);
@@ -61,9 +39,8 @@ public class Main {
         ContinuousMatching matching = new ContinuousMatching(validation, clientData, instrumentData, orderData);
         matching.match();
 
-        // perform close auction simulation
-
-        // implement
-        System.out.println("testing");
+        validation.writeRejectionTo("src/main/resources/exchange.csv");
+        validation.writeClientTo("src/main/resources/client.csv");
+        validation.writeInstrumentReport("src/main/resources/report.csv");
     }
 }

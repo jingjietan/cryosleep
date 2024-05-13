@@ -83,7 +83,7 @@ public class ContinuousMatching {
             }
             if (sellData.price.compareTo(buyData.price) <= 0) { // Sell <= Buy
                 int deducted = sellData.deduct(buyData);
-                validator.recordTranscation(sellData.instrument, buyData.client, sellData.client, deducted);
+                validator.recordTranscation(sellData.instrument, buyData.client, sellData.client, deducted, buyData.price);
 
                 if (sellData.isDepleted()) {
                     sellBook.remove();
