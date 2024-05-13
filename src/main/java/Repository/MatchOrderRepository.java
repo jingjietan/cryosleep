@@ -6,6 +6,7 @@ import java.util.*;
 import Common.BuySell;
 import Common.ClientData;
 import Common.OrderData;
+import Validation.Validator;
 
 public class MatchOrderRepository {
     private List<OrderData> orderBook;
@@ -13,13 +14,15 @@ public class MatchOrderRepository {
     private Map<String, Integer> clientRatings;
     private PriorityQueue<OrderData> priorityQueue;
     private BigDecimal openPrice;
+    private Validator validator;
 
-    public MatchOrderRepository(List<OrderData> orders, List<ClientData> clients) {
+    public MatchOrderRepository(List<OrderData> orders, List<ClientData> clients, Validator validator) {
         // Initialize orderBook with Orders and Client data
         orderBook = new ArrayList<OrderData>();
         clientData = new ArrayList<ClientData>();
         priorityQueue = new PriorityQueue<>(Comparator.comparingInt(order -> clientRatings.get(order.client)));
         clientRatings = new HashMap<>();
+        this.validator = validator;
         openPrice = BigDecimal.ZERO;
 
         orderBook = orders;
@@ -32,7 +35,7 @@ public class MatchOrderRepository {
 
     // SELL: MARKET > lower price > smaller (higher) rating > smaller (earlier) arrival time
     // BUY: higher price > smaller (higher) rating > smaller (earlier) arrival time > MARKET
-    public BigDecimal matchOrders() {
+    public TradeResult matchOrders() {
         // -Set the open price first (if there are buy/sell orders with MARKET price)-
         // INITIALISE: Gather all possible match prices
         Set<BigDecimal> uniqueBuyPrices = new HashSet<BigDecimal>();
@@ -40,6 +43,10 @@ public class MatchOrderRepository {
         int marketBuyOrders = 0;
         int marketSellOrders = 0;
         for (OrderData order : orderBook) {
+            System.out.println(validator.verify(order));
+            if (!validator.verify(order)) {
+                continue;
+            }
             if (order.side == BuySell.Buy) {
                 // Check if market price exists
                 if (order.price == BigDecimal.ZERO) {
@@ -57,7 +64,7 @@ public class MatchOrderRepository {
         // EDGE CASE: all buy/sell orders are market orders
         if (marketBuyOrders + marketSellOrders == orderBook.size()) {
             // Return 0 as open price
-            return BigDecimal.ZERO;
+            return new TradeResult(BigDecimal.ZERO, null, null);
         }
 
         // If there are market orders in BUY side, we can explore more possible match prices in the SELL side
@@ -93,6 +100,9 @@ public class MatchOrderRepository {
         }
         System.out.println("");
         System.out.println("=======");
+        int highestQty = 0;
+        PriorityQueue<OrderData> buyQueueBest = null;
+        PriorityQueue<OrderData> sellQueueBest = null;
         // CASE: Check the quantities of all possible open prices
         for (BigDecimal possibleOpenPrice : sortedUniqueBuyPrices) {
             if (possibleOpenPrice == BigDecimal.ZERO) {
@@ -147,7 +157,7 @@ public class MatchOrderRepository {
                 }
             }
             int tradeQuantity = 0;
-            // Simulate buys one by one
+            // Simulate buys one by one if there are matching sells
             if (sellQueue.size() > 0){
                 while (buyQueueCopy.size() > 0 && sellQueue.size() > 0) {
                     // Current buy order
@@ -165,31 +175,35 @@ public class MatchOrderRepository {
                         // If same quantity, continue to next buy order
                         OrderData sellOrder = sellQueueCopy.poll();
 
-                        System.out.println("In this buy order, buying from: " + sellOrder);
+//                        System.out.println("In this buy order, buying from: " + sellOrder);
                         if (sellOrder.getQuantity() > buyOrder.getQuantity()) {
                             sellOrder.setQuantity(sellOrder.getQuantity() - buyOrder.getQuantity());
                             sellQueueCopy.add(sellOrder);
                             tradeQuantity += buyOrder.getQuantity();
-                            System.out.println("Buyer bought out: " + buyOrder.getQuantity());
+                            System.out.println("Buyer " + buyOrder.client + " - Trade " + buyOrder.getOrderID() + " "  + buyOrder.getQuantity() + "@" + possibleOpenPrice + " - Seller " + sellOrder.client);
                             break;
                         } else if (buyOrder.getQuantity() > sellOrder.getQuantity()) {
                             int quantityChange = buyOrder.getQuantity() - sellOrder.getQuantity();
                             buyOrder.setQuantity(quantityChange);
-                            System.out.println("Buyer new quantity: " + quantityChange + " - Buyer bought: " + sellOrder.getQuantity());
+                            System.out.println("Buyer " + buyOrder.client + " - Trade " + buyOrder.getOrderID() + " " + sellOrder.getQuantity() + "@" + possibleOpenPrice + " - Seller " + sellOrder.client);
                             tradeQuantity += sellOrder.getQuantity();
                         } else {
                             tradeQuantity += buyOrder.getQuantity();
-                            System.out.println("Same quantity, buyer bought: " + buyOrder.getQuantity());
+                            System.out.println("Buyer " + buyOrder.client + " - Trade " + buyOrder.getOrderID() + " "  + buyOrder.getQuantity() + "@" + possibleOpenPrice + " - Seller " + sellOrder.client);
                             break;
                         }
                     }
                     System.out.println("==");
                 }
                 System.out.println("Total trade: " + tradeQuantity);
+                if (tradeQuantity > highestQty) {
+                    highestQty = tradeQuantity;
+                    buyQueueBest = buyQueueCopy;
+                    sellQueueBest = sellQueueCopy;
+                }
                 quantityPerPrice[quantityIndex] = tradeQuantity;
                 quantityIndex++;
                 System.out.println("=======");
-
             } else{
                 System.out.println("Total trade: " + tradeQuantity);
                 quantityPerPrice[quantityIndex] = tradeQuantity;
@@ -206,16 +220,23 @@ public class MatchOrderRepository {
                 maxIndex = i;
             }
         }
-        System.out.println(maxValue + " "+ maxIndex);
 
         // CASE: no buy price overlaps with sell price
         // Return NULL for OpenPrice - indication to set open price as the first trade happened in continuous session
         if (maxIndex == -1) {
             // Return 0 as open price
-            return BigDecimal.ZERO;
+            return new TradeResult(BigDecimal.ZERO, null, null);
         }
-        System.out.println(sortedUniqueBuyPrices);
-        List<BigDecimal> uniqueBuyPricesList = new ArrayList<>(sortedUniqueBuyPrices);
-        return uniqueBuyPricesList.get(maxIndex + marketBuyOrders);
+        List<BigDecimal> uniqueBuyPricesList = new ArrayList<>(uniqueBuyPrices);
+        if (marketBuyOrders > 0) {
+            maxIndex++;
+        }
+        List<BigDecimal> sortedUniqueBuyPricesList = new ArrayList<>(sortedUniqueBuyPrices);
+
+        List<OrderData> buyQueueBestList = new ArrayList<>(buyQueueBest);
+        List<OrderData> sellQueueBestList = new ArrayList<>(sellQueueBest);
+
+        return new TradeResult(sortedUniqueBuyPricesList.get(maxIndex), buyQueueBestList, sellQueueBestList);
+
     };
 };

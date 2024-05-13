@@ -4,6 +4,7 @@ import IO.ClientReader;
 import IO.InstrumentReader;
 import IO.OrderReader;
 import Matcher.ContinuousMatching;
+import Repository.TradeResult;
 import Validation.Validation;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -29,18 +30,48 @@ import Repository.MatchOrderRepository;
 public class Main {
     public static void main(String[] args) {
         System.out.println(Paths.get("").toAbsolutePath());
+        // track orders rejected
+        // track client data
+        // track data for each instrument order
+        // ----
+        ClientReader cReader = new ClientReader();
+        OrderReader oReader = new OrderReader();
 
-        var clientData = ClientReader.readFrom(true);
+        List<OrderData> orders = new ArrayList<OrderData>();
+        List<ClientData> clients = new ArrayList<ClientData>();
+        // read data from files
+        // implement policy checking
+        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, true);
+        clients = cReader.readFrom(true);
         var instrumentData = InstrumentReader.readFrom(true);
-        var orderData = OrderReader.readFrom(OrderReader.OrderPeriod.Continuous, true);
+        // implement policy checking functions
+        // check at end of auction
+        // check at every action in continuous
+        var validation = new Validation(clients, instrumentData, orders);
 
-        var validation = new Validation(clientData, instrumentData, orderData);
+        // perform open action simulation
+        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients, validation);
+        // assumption: Auction has ended
+        TradeResult tradeResult = matchOrdersRepository.matchOrders();
+        System.out.println("===== AUCTION =====");
+        System.out.println("Out Auction Output: " + tradeResult.getMaxTradeQuantity());
+        List<OrderData> combinedList = new ArrayList<>();
+        combinedList.addAll(tradeResult.getBuyOrders());
+        combinedList.addAll(tradeResult.getSellOrders());
 
-        ContinuousMatching matching = new ContinuousMatching(validation, clientData, instrumentData, orderData);
+        System.out.println("===== LIVE =====");
+        System.out.println(combinedList);
+        // perform continuous action simulation
+        ContinuousMatching matching = new ContinuousMatching(validation, clients, instrumentData, combinedList);
         matching.match();
+        System.out.println("===== CLOSE =====");
 
-        validation.writeRejectionTo("src/main/resources/exchange.csv");
-        validation.writeClientTo("src/main/resources/client.csv");
-        validation.writeInstrumentReport("src/main/resources/report.csv");
+        List<OrderData> combinedListForClose = new ArrayList<>();
+        combinedListForClose.addAll(matching.getBuyBook());
+        combinedListForClose.addAll(matching.getSellBook());
+        System.out.println(combinedListForClose);
+        // perform close auction simulation
+        MatchOrderRepository closeOrdersRepository = new MatchOrderRepository(combinedListForClose, clients, validation);
+        System.out.println(closeOrdersRepository.matchOrders().getMaxTradeQuantity());
     }
 }

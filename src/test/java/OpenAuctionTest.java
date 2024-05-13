@@ -1,8 +1,10 @@
 import Common.ClientData;
 import Common.OrderData;
 import IO.ClientReader;
+import IO.InstrumentReader;
 import IO.OrderReader;
 import Repository.MatchOrderRepository;
+import Validation.Validation;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,12 +27,15 @@ public class OpenAuctionTest {
         // implement policy checking functions
         // check at end of auction
         // check at every action in continuous
+        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, false);
+        clients = cReader.readFrom(false);
+        var instrumentData = InstrumentReader.readFrom(true);
+        var validation = new Validation(clients, instrumentData, orders);
 
-        // perform open action simulation
-        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients);
+        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients, validation);
         double value = 32.1;
         BigDecimal expectedValue = new BigDecimal("32.1");
-        BigDecimal actualValue = matchOrdersRepository.matchOrders();
+        BigDecimal actualValue = matchOrdersRepository.matchOrders().getMaxTradeQuantity();
 
         assertEquals(0, actualValue.compareTo(expectedValue));
     }
