@@ -16,12 +16,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.ArrayList;
 
 import Common.ClientData;
 import Common.OrderData;
@@ -66,12 +62,26 @@ public class Main {
         matching.match();
         System.out.println("===== CLOSE =====");
 
+        List<OrderData> list = new ArrayList<>();
+        for (PriorityQueue<OrderData> queue : matching.getBuyBook().values()) {
+            list.addAll(queue);
+        }
+        List<OrderData> list2 = new ArrayList<>();
+        for (PriorityQueue<OrderData> queue : matching.getSellBook().values()) {
+            list.addAll(queue);
+        }
         List<OrderData> combinedListForClose = new ArrayList<>();
-        combinedListForClose.addAll(matching.getBuyBook());
-        combinedListForClose.addAll(matching.getSellBook());
+        combinedListForClose.addAll(list);
+        combinedListForClose.addAll(list2);
+
+
         System.out.println(combinedListForClose);
         // perform close auction simulation
         MatchOrderRepository closeOrdersRepository = new MatchOrderRepository(combinedListForClose, clients, validation);
         System.out.println(closeOrdersRepository.matchOrders().getMaxTradeQuantity());
+        validation.writeRejectionTo("src/main/resources/exchange.csv");
+        validation.writeClientTo("src/main/resources/client.csv");
+        validation.writeInstrumentReport("src/main/resources/report.csv");
+
     }
 }
