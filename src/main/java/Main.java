@@ -20,18 +20,38 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.ArrayList;
+
+import Common.ClientData;
+import Common.OrderData;
+import Repository.MatchOrderRepository;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println(Paths.get("").toAbsolutePath());
-
         // track orders rejected
         // track client data
         // track data for each instrument order
         // ----
+        ClientReader cReader = new ClientReader();
+        OrderReader oReader = new OrderReader();
 
+        List<OrderData> orders = new ArrayList<OrderData>();
+        List<ClientData> clients = new ArrayList<ClientData>();
         // read data from files
+        // implement policy checking
+        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, false);
+        clients = cReader.readFrom(false);
+        // implement policy checking functions
+        // check at end of auction
+        // check at every action in continuous
 
+        // perform open action simulation
+        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients);
+        System.out.println("Out Auction Output: " + matchOrdersRepository.matchOrders());
+        // assumption: Auction has ended
+
+        // perform continuous action simulation
         var clientData = ClientReader.readFrom(true);
         var instrumentData = InstrumentReader.readFrom(true);
         var orderData = OrderReader.readFrom(OrderReader.OrderPeriod.Continuous, true);
@@ -40,14 +60,6 @@ public class Main {
 
         ContinuousMatching matching = new ContinuousMatching(validation, clientData, instrumentData, orderData);
         matching.match();
-
-        // implement policy checking
-        // check at end of auction
-        // check at every action in continuous
-
-        // perform open action simulation
-
-        // perform continuous action simulation
 
         // perform close auction simulation
 
