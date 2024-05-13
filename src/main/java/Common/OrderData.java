@@ -1,15 +1,17 @@
 package Common;
 
+import java.math.BigDecimal;
+
 public class OrderData {
     public String time;
     public String orderID;
     public String client;
     public String instrument;
     public BuySell side;
-    public double price; // 0 is MARKET
+    public BigDecimal price; // 0 is MARKET
     public int quantity;
 
-    public OrderData(String time, String orderID, String client, String instrument, BuySell side, double price, int quantity) {
+    public OrderData(String time, String orderID, String client, String instrument, BuySell side, BigDecimal price, int quantity) {
         this.time = time;
         this.orderID = orderID;
         this.client = client;
@@ -59,11 +61,11 @@ public class OrderData {
         this.side = side;
     }
 
-    public double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 
@@ -73,5 +75,18 @@ public class OrderData {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    @Override
+    public String toString() {
+        return "OrderData{" +
+                "time='" + time + '\'' +
+                ", orderID='" + orderID + '\'' +
+                ", client='" + client + '\'' +
+                ", instrument='" + instrument + '\'' +
+                ", side=" + side +
+                ", price=" + price +
+                ", quantity=" + quantity +
+                '}';
     }
 }

@@ -34,4 +34,13 @@ public class InstrumentData {
     public void setLotSize(int lotSize) {
         this.lotSize = lotSize;
     }
+
+    @Override
+    public String toString() {
+        return "InstrumentData{" +
+                "instrumentID='" + instrumentID + '\'' +
+                ", currency='" + currency + '\'' +
+                ", lotSize=" + lotSize +
+                '}';
+    }
 }

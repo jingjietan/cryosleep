@@ -1,5 +1,8 @@
 package Common;
 
+import com.opencsv.bean.CsvBindByName;
+import com.opencsv.bean.CsvBindByPosition;
+
 import java.util.Set;
 
 public class ClientData {
@@ -47,5 +50,13 @@ public class ClientData {
         this.rating = rating;
     }
 
-
+    @Override
+    public String toString() {
+        return "ClientData{" +
+                "clientID='" + clientID + '\'' +
+                ", currencies=" + currencies +
+                ", positionCheck=" + positionCheck +
+                ", rating=" + rating +
+                '}';
+    }
 }
