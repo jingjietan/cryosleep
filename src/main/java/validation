@@ -1,0 +1,53 @@
+instrumentdf = pd.read_csv("input_instruments.csv",index_col="InstrumentID")
+clientdf = pd.read_csv("input_clients.csv",index_col="ClientID")
+processedOrders = []
+
+# all of these return false if they get rejected
+def instrument_check(o):
+    if o["Instrument"] not in instrumentdf.index: # if the instrument isn't in the list of indexes for the instrument dataframe
+        o["Status"] = "REJECTED - INSTRUMENT NOT FOUND"
+        return False
+    return True
+
+def currency_check(o):
+    client = o["Client"]
+    allowedCurrencies = str(clientdf.loc[client,"Currencies"])
+    if o["Currency"] not in allowedCurrencies:
+        o["Status"] = "REJECTED - MISMATCH CURRENCY"
+        return False
+    return True
+
+def size_check(o):
+    instrument = o["Instrument"]
+    lot_size = instrumentdf.loc[instrument,"LotSize"]
+    if order["Quantity"] % lot_size != 0:
+        o["Status"] = "REJECTED - INVALID LOT SIZE"
+        return False
+    return True
+    
+def pos_check(o):
+    client = o["Client"]
+    if (clientdf.loc[client,"PositionCheck"] == "Y") & (o["Side"] == "Sell"):
+        pastOrders = pd.read_csv("input_orders.csv")
+        previousBought = processedOrders[(processedOrders["Client"] == o["Client"]) 
+                                         & (processedOrders["Side"] == "Buy") 
+                                         & (processedOrders["Instrument"] == o["Instrument"])
+                                         & (processedOrders["take"] == "ACCEPTED")] # find all the previously ACCEPTED bought shares of the same client and instrument.
+        sumOfPreviousBought = previousBought["Quantity"].sum()
+        if Quantity < sumOfPreviousBought:
+            o["Status"] = "REJECTED - POSITION CHECK FAILED"
+            return False
+    return True
+
+# if it were working the following would do the above on the test data
+testdata = pd.read_csv("input_orders.csv")
+
+for i in testdata.iterrows():
+    if instrument_check(i) == True:
+        if currency_check(i) == True:
+            if size_check(i) == True:
+                if pos_check(i) == True:
+                    o["Status"] = "ACCEPTED"
+    processedOrders.append(i)
+
+processedOrders
