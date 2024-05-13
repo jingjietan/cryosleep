@@ -102,9 +102,10 @@ public class ContinuousMatching {
 
     private void buy(OrderData orderData) {
         Optional<OrderData> data;
-        while ((data = getLargestBuyOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
+        while ((data = getSmallestSellOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
             var match = data.get();
-            orderData.deduct(match);
+            int deducted = orderData.deduct(match);
+            validator.recordTranscation(match, deducted);
 
             if (match.isDepleted()) {
                 buyBook.remove(match);
@@ -117,9 +118,10 @@ public class ContinuousMatching {
 
     private void sell(OrderData orderData) {
         Optional<OrderData> data;
-        while ((data = getSmallestSellOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
+        while ((data = getLargestBuyOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
             var match = data.get();
-            orderData.deduct(match);
+            int deducted = orderData.deduct(match);
+            validator.recordTranscation(match, deducted);
 
             if (match.isDepleted()) {
                 sellBook.remove(match);

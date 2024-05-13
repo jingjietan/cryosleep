@@ -87,10 +87,11 @@ public class OrderData implements Cloneable {
     }
 
     // Deduct both sides till one order data is depleted.
-    public void deduct(OrderData orderData) {
+    public int deduct(OrderData orderData) {
         var deductable = Math.min(this.quantity, orderData.quantity);
         this.quantity -= deductable;
         orderData.quantity -= deductable;
+        return deductable;
     }
 
     @Override

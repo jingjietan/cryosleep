@@ -1,5 +1,6 @@
 package Validation;
 
+import Common.BuySell;
 import Common.ClientData;
 import Common.InstrumentData;
 import Common.OrderData;
@@ -10,9 +11,13 @@ import java.util.Map;
 import java.util.Set;
 
 public class Validation implements Validator {
+    // Used to determine position
+    record ClientInstrumentPair(String clientID, String instrumentID) {}
+
     private Map<String, ClientData> clientData;
     private Map<String, InstrumentData> instrumentData;
-    private List<OrderData> orderData;
+    // private List<OrderData> orderData;
+    private Map<ClientInstrumentPair, Integer> positionData;
     private Map<String, ValidationErrors> rejections;
     public Validation(List<ClientData> clientData, List<InstrumentData> instrumentData, List<OrderData> orderData) {
         this.clientData = new HashMap<>();
@@ -24,7 +29,9 @@ public class Validation implements Validator {
             this.instrumentData.put(instrument.instrumentID, instrument);
         }
 
-        this.orderData = orderData;
+        this.positionData = new HashMap<>();
+
+        // this.orderData = orderData;
         this.rejections = new HashMap<>();
     }
 
@@ -49,8 +56,24 @@ public class Validation implements Validator {
             log(orderData.orderID, ValidationErrors.INVALID_LOT_SIZE);
             return false;
         }
-        // how to check position?
+        if (clientData.get(orderData.client).positionCheck && orderData.side == BuySell.Sell) {
+            if (orderData.quantity > positionData.getOrDefault(new ClientInstrumentPair(orderData.client, orderData.instrument), 0)) {
+                log(orderData.orderID, ValidationErrors.POSITION_CHECK_FAILED);
+                return false;
+            }
+        }
         return true;
+    }
+
+    @Override
+    public void recordTranscation(OrderData orderData, int quantity) {
+        int q = quantity;
+        if (orderData.side == BuySell.Sell) {
+            q = -q;
+        }
+        var cip = new ClientInstrumentPair(orderData.orderID, orderData.instrument);
+        var prev = positionData.getOrDefault(cip, 0);
+        positionData.replace(cip, prev + q);
     }
 
     public Map<String, ValidationErrors> getRejections() {
