@@ -4,6 +4,7 @@ import IO.ClientReader;
 import IO.InstrumentReader;
 import IO.OrderReader;
 import Matcher.ContinuousMatching;
+import Validation.Validation;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -35,7 +36,9 @@ public class Main {
         var instrumentData = InstrumentReader.readFrom(true);
         var orderData = OrderReader.readFrom(OrderReader.OrderPeriod.Continuous, true);
 
-        ContinuousMatching matching = new ContinuousMatching(integer -> {}, clientData, instrumentData, orderData);
+        var validation = new Validation(clientData, instrumentData, orderData);
+
+        ContinuousMatching matching = new ContinuousMatching(validation, clientData, instrumentData, orderData);
         matching.match();
 
         // implement policy checking

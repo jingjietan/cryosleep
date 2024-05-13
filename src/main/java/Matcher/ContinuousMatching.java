@@ -3,13 +3,14 @@ package Matcher;
 import Common.ClientData;
 import Common.InstrumentData;
 import Common.OrderData;
+import Validation.Validator;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class ContinuousMatching {
-    public Consumer<Integer> registerCallback;
+    public Validator validator;
 
     private Map<String, ClientData> clients;
     private List<InstrumentData> instruments;
@@ -70,8 +71,8 @@ public class ContinuousMatching {
         };
     }
 
-    public ContinuousMatching(Consumer<Integer> registerCallback, List<ClientData> clients, List<InstrumentData> instruments, List<OrderData> orders) {
-        this.registerCallback = registerCallback;
+    public ContinuousMatching(Validator validator, List<ClientData> clients, List<InstrumentData> instruments, List<OrderData> orders) {
+        this.validator = validator;
 
         this.clients = new HashMap<>();
         for (var client: clients) {
@@ -88,7 +89,9 @@ public class ContinuousMatching {
         // assuming orders are according to time
 
         for (var order: orders) {
-            // if order is valid
+            if (!validator.verify(order)) {
+                continue;
+            }
 
             switch (order.side) {
                 case Buy -> buy(order);
