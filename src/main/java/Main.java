@@ -74,11 +74,11 @@ public class Main {
         combinedListForClose.addAll(list);
         combinedListForClose.addAll(list2);
 
-
         System.out.println(combinedListForClose);
         // perform close auction simulation
         MatchOrderRepository closeOrdersRepository = new MatchOrderRepository(combinedListForClose, clients, validation);
         System.out.println(closeOrdersRepository.matchOrders().getMaxTradeQuantity());
+
         validation.writeRejectionTo("src/main/resources/exchange.csv");
         validation.writeClientTo("src/main/resources/client.csv");
         validation.writeInstrumentReport("src/main/resources/report.csv");

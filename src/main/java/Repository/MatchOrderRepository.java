@@ -237,6 +237,5 @@ public class MatchOrderRepository {
         List<OrderData> sellQueueBestList = new ArrayList<>(sellQueueBest);
 
         return new TradeResult(sortedUniqueBuyPricesList.get(maxIndex), buyQueueBestList, sellQueueBestList);
-
     };
 };
