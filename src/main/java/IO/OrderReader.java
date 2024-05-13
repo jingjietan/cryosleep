@@ -94,4 +94,60 @@ public class OrderReader {
             return new ArrayList<>();
         }
     }
+    public static List<OrderData> readFrom(OrderPeriod period, String filePath) {
+        try {
+            // hardcoded for this project.
+            FileReader fileReader = new FileReader(filePath);
+            CSVReader csvReader = new CSVReaderBuilder(fileReader).withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).withSkipLines(1).build();
+            String[] nextRecord;
+
+            Function<Time, Boolean> canMatch;
+            switch (period) {
+                case All -> canMatch = time -> true;
+                case Open -> canMatch = time -> time.after(openAuctionStart) && time.before(openAuctionEnd);
+                case Continuous -> canMatch = time -> time.after(continuousAuctionStart) && time.before(continuousAuctionEnd);
+                case Close -> canMatch = time -> time.after(closeAuctionStart) && time.before(closeAuctionEnd);
+                default -> throw new RuntimeException("");
+            }
+
+            List<OrderData> list = new ArrayList<>();
+
+            while ((nextRecord = csvReader.readNext()) != null) {
+                assert nextRecord.length == 7;
+
+                Time time = Time.valueOf(nextRecord[0]);
+                if (!canMatch.apply(time)) {
+                    continue;
+                }
+
+                String order = nextRecord[1];
+                String instrument = nextRecord[2];
+                String client = nextRecord[4];
+                BigDecimal price;
+                if (nextRecord[5].equals("Market")) {
+                    price = BigDecimal.ZERO;
+                } else {
+                    price = BigDecimal.valueOf(Double.parseDouble(nextRecord[5]));
+                }
+
+                var quantity = Double.valueOf(nextRecord[3]).intValue();
+
+                BuySell side;
+                if (nextRecord[6].equals("Sell")) {
+                    side = BuySell.Sell;
+                } else if (nextRecord[6].equals("Buy")) {
+                    side = BuySell.Buy;
+                } else {
+                    throw new RuntimeException("Invalid side " + nextRecord[6]);
+                }
+
+                OrderData orderData = new OrderData(time, order, client, instrument, side, price, quantity);
+                list.add(orderData);
+            }
+            return list;
+        } catch (CsvValidationException | IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
 }
