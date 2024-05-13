@@ -79,9 +79,26 @@ public class MatchOrderRepository {
         for (int i = 0; i < quantityPerPrice.length; i++) {
             quantityPerPrice[i] = 0;
         }
+        int quantityIndex = 0;
 
+        // Sort the buy prices from small to big
+        List<BigDecimal> sortedPrices = new ArrayList<>(uniqueBuyPrices);
+        Collections.sort(sortedPrices);
+
+        Set<BigDecimal> sortedUniqueBuyPrices = new LinkedHashSet<>(sortedPrices);
+
+        System.out.print("All open prices: ");
+        for (BigDecimal price : sortedUniqueBuyPrices) {
+            System.out.print(price + " ");
+        }
+        System.out.println("");
+        System.out.println("=======");
         // CASE: Check the quantities of all possible open prices
-        for (BigDecimal possibleOpenPrice : uniqueBuyPrices) {
+        for (BigDecimal possibleOpenPrice : sortedUniqueBuyPrices) {
+            if (possibleOpenPrice == BigDecimal.ZERO) {
+                continue;
+            }
+            System.out.println("Current open price considered: " + possibleOpenPrice);
             // Populate all priority queues
             // BUY SIDE pq
             PriorityQueue<OrderData> buyQueue = new PriorityQueue<>(
@@ -98,6 +115,7 @@ public class MatchOrderRepository {
                     .thenComparingLong(order -> order.getTime().toLocalTime().toSecondOfDay())
             );
 
+            // Populate all priority queues
             for (OrderData order : orderBook) {
                 // Populate all buys >= open price or MARKET
                 if (order.getSide() == BuySell.Buy) {
@@ -113,40 +131,69 @@ public class MatchOrderRepository {
                     }
                 }
             }
-            System.out.println(buyQueue);
-            // Simulate buys one by one
-            while (buyQueue.size() > 0) {
-                int tradeQuantity = 0;
-                // Current buy order
-                OrderData buyOrder = buyQueue.poll();
-                System.out.println(buyOrder);
-                // If this order is market,
-                if (buyOrder.getPrice().compareTo(BigDecimal.ZERO) == 0) {
-                    buyOrder.setPrice(possibleOpenPrice);
-                }
+            // This works - System.out.println("At this open price, here are the buy orders: " + buyQueue);
+            // Make a deep copy of the buy queue
+            PriorityQueue<OrderData> buyQueueCopy = new PriorityQueue<>(buyQueue.size(), buyQueue.comparator());
+            for (OrderData order : buyQueue) {
+                buyQueueCopy.add(order.clone());
+            }
+
+            PriorityQueue<OrderData> sellQueueCopy = null; // Initialize sellQueueCopy to null
+            if (sellQueue.size() > 0) {
                 // Make a deep copy of the sell queue
-                PriorityQueue<OrderData> sellQueueCopy = new PriorityQueue<>(sellQueue.size(), sellQueue.comparator());
+                sellQueueCopy = new PriorityQueue<>(sellQueue.size(), sellQueue.comparator());
                 for (OrderData order : sellQueue) {
                     sellQueueCopy.add(order.clone());
                 }
-
-                // Simulate purchases
-                while (sellQueueCopy.size() > 0) {
-                    // If sell order > buy order, add sell order back to pq and continue to next buy order
-                    // If buy order > sell order, update buy order with reduced quantity
-                    OrderData sellOrder = sellQueueCopy.poll();
-                    if (sellOrder.getQuantity() > buyOrder.getQuantity()) {
-                        int quantityChange = sellOrder.getQuantity() - buyOrder.getQuantity();
-                        sellOrder.setQuantity(quantityChange);
-                        sellQueueCopy.add(sellOrder);
-                        tradeQuantity += quantityChange;
-                        break;
-                    } else if (buyOrder.getQuantity() > sellOrder.getQuantity()) {
-                        int quantityChange = buyOrder.getQuantity() - sellOrder.getQuantity();
-                        buyOrder.setQuantity(quantityChange);
-                        tradeQuantity += quantityChange;
+            }
+            int tradeQuantity = 0;
+            // Simulate buys one by one
+            if (sellQueue.size() > 0){
+                while (buyQueueCopy.size() > 0 && sellQueue.size() > 0) {
+                    // Current buy order
+                    OrderData buyOrder = buyQueueCopy.poll();
+                    // If this order is market,
+                    if (buyOrder.getPrice().compareTo(BigDecimal.ZERO) == 0) {
+                        System.out.printf("(Market Order) ");
+                        buyOrder.setPrice(possibleOpenPrice);
                     }
+                    System.out.println("Current buy order: " + buyOrder);
+                    // Simulate purchases
+                    while (sellQueueCopy.size() > 0) {
+                        // If sell order > buy order, add sell order back to pq and continue to next buy order
+                        // If buy order > sell order, update buy order with reduced quantity
+                        // If same quantity, continue to next buy order
+                        OrderData sellOrder = sellQueueCopy.poll();
+
+                        System.out.println("In this buy order, buying from: " + sellOrder);
+                        if (sellOrder.getQuantity() > buyOrder.getQuantity()) {
+                            sellOrder.setQuantity(sellOrder.getQuantity() - buyOrder.getQuantity());
+                            sellQueueCopy.add(sellOrder);
+                            tradeQuantity += buyOrder.getQuantity();
+                            System.out.println("Buyer bought out: " + buyOrder.getQuantity());
+                            break;
+                        } else if (buyOrder.getQuantity() > sellOrder.getQuantity()) {
+                            int quantityChange = buyOrder.getQuantity() - sellOrder.getQuantity();
+                            buyOrder.setQuantity(quantityChange);
+                            System.out.println("Buyer new quantity: " + quantityChange + " - Buyer bought: " + sellOrder.getQuantity());
+                            tradeQuantity += sellOrder.getQuantity();
+                        } else {
+                            tradeQuantity += buyOrder.getQuantity();
+                            System.out.println("Same quantity, buyer bought: " + buyOrder.getQuantity());
+                            break;
+                        }
+                    }
+                    System.out.println("==");
                 }
+                System.out.println("Total trade: " + tradeQuantity);
+                quantityPerPrice[quantityIndex] = tradeQuantity;
+                quantityIndex++;
+                System.out.println("=======");
+
+            } else{
+                System.out.println("Total trade: " + tradeQuantity);
+                quantityPerPrice[quantityIndex] = tradeQuantity;
+                quantityIndex++;
             }
         }
 
@@ -159,13 +206,16 @@ public class MatchOrderRepository {
                 maxIndex = i;
             }
         }
+        System.out.println(maxValue + " "+ maxIndex);
+
         // CASE: no buy price overlaps with sell price
         // Return NULL for OpenPrice - indication to set open price as the first trade happened in continuous session
         if (maxIndex == -1) {
             // Return 0 as open price
             return BigDecimal.ZERO;
         }
-        List<BigDecimal> uniqueBuyPricesList = new ArrayList<>(uniqueBuyPrices);
-        return uniqueBuyPricesList.get(maxIndex);
+        System.out.println(sortedUniqueBuyPrices);
+        List<BigDecimal> uniqueBuyPricesList = new ArrayList<>(sortedUniqueBuyPrices);
+        return uniqueBuyPricesList.get(maxIndex + marketBuyOrders);
     };
 };
