@@ -17,7 +17,7 @@ public class Reader {
 
     @Test
     public void testOrderReader() {
-        var data = OrderReader.readFrom();
+        var data = OrderReader.readFrom(OrderReader.OrderPeriod.All);
         assertEquals(data.get(0).quantity, 1500);
         assertEquals(data.get(1).price, BigDecimal.valueOf(32.1));
         assertEquals(data.get(2).side, BuySell.Buy);

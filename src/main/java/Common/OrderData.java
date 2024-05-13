@@ -1,9 +1,10 @@
 package Common;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 
 public class OrderData {
-    public String time;
+    public Time time;
     public String orderID;
     public String client;
     public String instrument;
@@ -11,7 +12,7 @@ public class OrderData {
     public BigDecimal price; // 0 is MARKET
     public int quantity;
 
-    public OrderData(String time, String orderID, String client, String instrument, BuySell side, BigDecimal price, int quantity) {
+    public OrderData(Time time, String orderID, String client, String instrument, BuySell side, BigDecimal price, int quantity) {
         this.time = time;
         this.orderID = orderID;
         this.client = client;
@@ -21,11 +22,11 @@ public class OrderData {
         this.quantity = quantity;
     }
 
-    public String getTime() {
+    public Time getTime() {
         return time;
     }
 
-    public void setTime(String time) {
+    public void setTime(Time time) {
         this.time = time;
     }
 
