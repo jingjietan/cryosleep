@@ -1,5 +1,6 @@
 package Matcher;
 
+import Common.BuySell;
 import Common.ClientData;
 import Common.InstrumentData;
 import Common.OrderData;
@@ -14,8 +15,8 @@ public class ContinuousMatching {
     private Map<String, ClientData> clients;
     private List<InstrumentData> instruments;
     private List<OrderData> orders;
-    private PriorityQueue<OrderData> buyBook;
-    private PriorityQueue<OrderData> sellBook;
+    private Map<String, PriorityQueue<OrderData>> buyBook;
+    private Map<String, PriorityQueue<OrderData>> sellBook;
     private Comparator<OrderData> getBookOrderComparator(boolean maximum) {
         return (o1, o2) -> {
             int comp = o1.price.compareTo(o2.price);
@@ -39,6 +40,8 @@ public class ContinuousMatching {
         };
     }
 
+    private OrderData latestOrder = null;
+
     public ContinuousMatching(Validator validator, List<ClientData> clients, List<InstrumentData> instruments, List<OrderData> orders) {
         this.validator = validator;
 
@@ -49,8 +52,10 @@ public class ContinuousMatching {
         this.instruments = instruments;
         this.orders = orders;
 
-        buyBook = new PriorityQueue<>(getBookOrderComparator(false)); // buy low
-        sellBook = new PriorityQueue<>(getBookOrderComparator(true)); // sell high
+        buyBook = new HashMap<>();
+                //new PriorityQueue<>(getBookOrderComparator(false)); // buy low
+        sellBook = new HashMap<>();
+                //= new PriorityQueue<>(getBookOrderComparator(true)); // sell high
     }
 
     public void match() {
@@ -61,35 +66,43 @@ public class ContinuousMatching {
                 continue;
             }
 
-            switch (order.side) {
-                case Buy -> buyBook.add(order);
-                case Sell -> sellBook.add(order);
-            }
 
-            resolve();
+
+            switch (order.side) {
+                case Buy -> {
+                    getBuyBook(order.instrument).add(order);
+                }
+                case Sell -> {
+                    getSellBook(order.instrument).add(order);
+                }
+            }
+            latestOrder = order;
+
+            resolve(order.instrument);
         }
     }
 
-    private void resolve() {
+    private void resolve(String instrument) {
         OrderData buyData;
         OrderData sellData;
 
         while (true) {
-            buyData = buyBook.peek();
-            sellData = sellBook.peek();
+            buyData = getBuyBook(instrument).peek();
+            sellData = getSellBook(instrument).peek();
             if (buyData == null || sellData == null) {
                 // No more buy/sell to match
                 return;
             }
+
             if (sellData.price.compareTo(buyData.price) <= 0) { // Sell <= Buy
                 int deducted = sellData.deduct(buyData);
                 validator.recordTranscation(sellData.instrument, buyData.client, sellData.client, deducted, buyData.price);
 
                 if (sellData.isDepleted()) {
-                    sellBook.remove();
+                    getSellBook(instrument).remove();
                 }
                 if (buyData.isDepleted()) {
-                    buyBook.remove();
+                    getBuyBook(instrument).remove();
                 }
             } else {
                 // No possible match
@@ -100,19 +113,33 @@ public class ContinuousMatching {
 
     /// For testing
     public void addBuyOrder(OrderData orderData) {
-        this.buyBook.add(orderData);
+        getBuyBook(orderData.instrument).add(orderData);
     }
 
     /// For testing
     public void addSellOrder(OrderData orderData) {
-        this.sellBook.add(orderData);
+        getSellBook(orderData.instrument).add(orderData);
     }
 
-    public PriorityQueue<OrderData> getBuyBook() {
+    public Map<String, PriorityQueue<OrderData>> getBuyBook() {
         return buyBook;
     }
 
-    public PriorityQueue<OrderData> getSellBook() {
+    public Map<String, PriorityQueue<OrderData>> getSellBook() {
         return sellBook;
+    }
+
+    public PriorityQueue<OrderData> getBuyBook(String asset) {
+        if (!buyBook.containsKey(asset)) {
+            buyBook.put(asset, new PriorityQueue<>(getBookOrderComparator(false)));
+        }
+        return buyBook.get(asset);
+    }
+
+    public PriorityQueue<OrderData> getSellBook(String asset) {
+        if (!sellBook.containsKey(asset)) {
+            sellBook.put(asset, new PriorityQueue<>(getBookOrderComparator(true)));
+        }
+        return sellBook.get(asset);
     }
 }
