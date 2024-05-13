@@ -25,18 +25,23 @@ public class OrderReader {
         All
     }
 
-    private static Date openAuctionStart = new GregorianCalendar(0, 0, 1, 9, 0).getTime();
-    private static Date openAuctionEnd = new GregorianCalendar(0, 0, 1, 9, 30).getTime();
-    private static Date continuousAuctionStart = new GregorianCalendar(0, 0, 1, 9, 30).getTime();
-    private static Date continuousAuctionEnd = new GregorianCalendar(0, 0, 1, 16, 0).getTime();
-    private static Date closeAuctionStart = new GregorianCalendar(0, 0, 1, 16, 0).getTime();
-    private static Date closeAuctionEnd = new GregorianCalendar(0, 0, 1, 16, 30).getTime();
+    private static Time openAuctionStart = Time.valueOf("09:00:00");
+    private static Time openAuctionEnd = Time.valueOf("09:30:00");
+    private static Time continuousAuctionStart = Time.valueOf("09:30:00");
+    private static Time continuousAuctionEnd = Time.valueOf("16:00:00");
+    private static Time closeAuctionStart = Time.valueOf("16:00:00");
+    private static Time closeAuctionEnd = Time.valueOf("16:30:00");
 
 
-    public static List<OrderData> readFrom(OrderPeriod period) {
+    public static List<OrderData> readFrom(OrderPeriod period, boolean test) {
         try {
             // hardcoded for this project.
-            FileReader fileReader = new FileReader("src/main/resources/example-set/input_orders.csv");
+            FileReader fileReader;
+            if (test) {
+                fileReader = new FileReader("src/main/resources/test-set/input_orders.csv");
+            } else {
+                fileReader = new FileReader("src/main/resources/example-set/input_orders.csv");
+            }
             CSVReader csvReader = new CSVReaderBuilder(fileReader).withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).withSkipLines(1).build();
             String[] nextRecord;
 
@@ -69,7 +74,7 @@ public class OrderReader {
                     price = BigDecimal.valueOf(Double.parseDouble(nextRecord[5]));
                 }
 
-                var quantity = Integer.parseInt(nextRecord[3]);
+                var quantity = Double.valueOf(nextRecord[3]).intValue();
 
                 BuySell side;
                 if (nextRecord[6].equals("Sell")) {

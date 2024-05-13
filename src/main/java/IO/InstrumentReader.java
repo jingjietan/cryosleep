@@ -16,10 +16,15 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 public class InstrumentReader {
-    public static List<InstrumentData> readFrom() {
+    public static List<InstrumentData> readFrom(boolean test) {
         try {
             // hardcoded for this project.
-            FileReader fileReader = new FileReader("src/main/resources/example-set/input_instruments.csv");
+            FileReader fileReader;
+            if (test) {
+                fileReader = new FileReader("src/main/resources/test-set/input_instruments.csv");
+            } else {
+                fileReader = new FileReader("src/main/resources/example-set/input_instruments.csv");
+            }
             CSVReader csvReader = new CSVReaderBuilder(fileReader).withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).withSkipLines(1).build();
             String[] nextRecord;
 

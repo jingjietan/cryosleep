@@ -78,6 +78,21 @@ public class OrderData {
         this.quantity = quantity;
     }
 
+    public boolean isMarket() {
+        return price.equals(BigDecimal.ZERO);
+    }
+
+    public boolean isDepleted() {
+        return this.quantity == 0;
+    }
+
+    // Deduct both sides till one order data is depleted.
+    public void deduct(OrderData orderData) {
+        var deductable = Math.min(this.quantity, orderData.quantity);
+        this.quantity -= deductable;
+        orderData.quantity -= deductable;
+    }
+
     @Override
     public String toString() {
         return "OrderData{" +

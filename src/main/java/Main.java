@@ -1,6 +1,9 @@
 import Common.ClientData;
+import Common.InstrumentData;
+import IO.ClientReader;
 import IO.InstrumentReader;
 import IO.OrderReader;
+import Matcher.ContinuousMatching;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -27,6 +30,13 @@ public class Main {
         // ----
 
         // read data from files
+
+        var clientData = ClientReader.readFrom(true);
+        var instrumentData = InstrumentReader.readFrom(true);
+        var orderData = OrderReader.readFrom(OrderReader.OrderPeriod.Continuous, true);
+
+        ContinuousMatching matching = new ContinuousMatching(integer -> {}, clientData, instrumentData, orderData);
+        matching.match();
 
         // implement policy checking
         // check at end of auction

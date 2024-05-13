@@ -15,10 +15,18 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 public class ClientReader {
-    public static List<ClientData> readFrom() {
+    public static List<ClientData> readFrom(boolean test) {
         try {
             // hardcoded for this project.
-            FileReader fileReader = new FileReader("src/main/resources/example-set/input_clients.csv");
+
+            FileReader fileReader;
+            if (test) {
+                fileReader = new FileReader("src/main/resources/test-set/input_clients.csv");
+            } else {
+                fileReader = new FileReader("src/main/resources/example-set/input_clients.csv");
+            }
+
+
             CSVReader csvReader = new CSVReaderBuilder(fileReader).withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS).withSkipLines(1).build();
             String[] nextRecord;
 
