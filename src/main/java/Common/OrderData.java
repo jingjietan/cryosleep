@@ -3,7 +3,7 @@ package Common;
 import java.math.BigDecimal;
 import java.sql.Time;
 
-public class OrderData {
+public class OrderData implements Cloneable {
     public Time time;
     public String orderID;
     public String client;
@@ -104,5 +104,14 @@ public class OrderData {
                 ", price=" + price +
                 ", quantity=" + quantity +
                 '}';
+    }
+
+    @Override
+    public OrderData clone() {
+        try {
+            return (OrderData) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
