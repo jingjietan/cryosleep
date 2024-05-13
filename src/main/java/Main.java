@@ -33,23 +33,23 @@ public class Main {
         // track client data
         // track data for each instrument order
         // ----
-        ClientReader cReader = new ClientReader();
-        OrderReader oReader = new OrderReader();
-
-        List<OrderData> orders = new ArrayList<OrderData>();
-        List<ClientData> clients = new ArrayList<ClientData>();
-        // read data from files
-        // implement policy checking
-        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, false);
-        clients = cReader.readFrom(false);
-        // implement policy checking functions
-        // check at end of auction
-        // check at every action in continuous
-
-        // perform open action simulation
-        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients);
-        System.out.println("Out Auction Output: " + matchOrdersRepository.matchOrders());
-        // assumption: Auction has ended
+//        ClientReader cReader = new ClientReader();
+//        OrderReader oReader = new OrderReader();
+//
+//        List<OrderData> orders = new ArrayList<OrderData>();
+//        List<ClientData> clients = new ArrayList<ClientData>();
+//        // read data from files
+//        // implement policy checking
+//        orders = oReader.readFrom(OrderReader.OrderPeriod.Open, false);
+//        clients = cReader.readFrom(false);
+//        // implement policy checking functions
+//        // check at end of auction
+//        // check at every action in continuous
+//
+//        // perform open action simulation
+//        MatchOrderRepository matchOrdersRepository = new MatchOrderRepository(orders, clients);
+//        System.out.println("Out Auction Output: " + matchOrdersRepository.matchOrders());
+//        // assumption: Auction has ended
 
         // perform continuous action simulation
         var clientData = ClientReader.readFrom(true);
