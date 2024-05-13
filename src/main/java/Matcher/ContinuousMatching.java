@@ -10,53 +10,21 @@ import java.util.*;
 import java.util.function.Function;
 
 public class ContinuousMatching {
-    public Validator validator;
-
+    private Validator validator;
     private Map<String, ClientData> clients;
     private List<InstrumentData> instruments;
     private List<OrderData> orders;
-
     private PriorityQueue<OrderData> buyBook;
-
-    /**
-     * Get the largest buy order price possible. Used to match sell orders.
-     * Does not modify the book.
-     */
-    private Optional<OrderData> getLargestBuyOrderPossible(BigDecimal price, boolean market) {
-        var data = buyBook.peek();
-        if (data == null) {
-            return Optional.empty();
-        }
-        if (!market && data.price.compareTo(price) >= 0) {
-            return Optional.empty();
-        }
-
-        return Optional.of(data);
-    }
-
-    /**
-     * Get the smallest sell order price possible. Used to match buy orders.
-     * Does not modify the book.
-     */
-    private Optional<OrderData> getSmallestSellOrderPossible(BigDecimal price, boolean market) {
-        var data = sellBook.peek();
-        if (data == null) {
-            return Optional.empty();
-        }
-        if (!market && data.price.compareTo(price) <= 0) {
-            return Optional.empty();
-        }
-
-        return Optional.of(data);
-    }
-
     private PriorityQueue<OrderData> sellBook;
-
-    private Comparator<OrderData> getBookOrderComparator() {
+    private Comparator<OrderData> getBookOrderComparator(boolean maximum) {
         return (o1, o2) -> {
             int comp = o1.price.compareTo(o2.price);
             if (comp != 0) {
-                return comp;
+                if (maximum) {
+                    return comp;
+                } else {
+                    return -comp;
+                }
             }
 
             Integer rating1 = clients.get(o1.client).rating;
@@ -81,8 +49,8 @@ public class ContinuousMatching {
         this.instruments = instruments;
         this.orders = orders;
 
-        buyBook = new PriorityQueue<>(getBookOrderComparator());
-        sellBook = new PriorityQueue<>(getBookOrderComparator());
+        buyBook = new PriorityQueue<>(getBookOrderComparator(false)); // buy low
+        sellBook = new PriorityQueue<>(getBookOrderComparator(true)); // sell high
     }
 
     public void match() {
@@ -94,41 +62,57 @@ public class ContinuousMatching {
             }
 
             switch (order.side) {
-                case Buy -> buy(order);
-                case Sell -> sell(order);
+                case Buy -> buyBook.add(order);
+                case Sell -> sellBook.add(order);
             }
+
+            resolve();
         }
     }
 
-    private void buy(OrderData orderData) {
-        Optional<OrderData> data;
-        while ((data = getSmallestSellOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
-            var match = data.get();
-            int deducted = orderData.deduct(match);
-            validator.recordTranscation(match, deducted);
+    private void resolve() {
+        OrderData buyData;
+        OrderData sellData;
 
-            if (match.isDepleted()) {
-                buyBook.remove(match);
+        while (true) {
+            buyData = buyBook.peek();
+            sellData = sellBook.peek();
+            if (buyData == null || sellData == null) {
+                // No more buy/sell to match
+                return;
             }
-            if (orderData.isDepleted()) {
+            if (sellData.price.compareTo(buyData.price) <= 0) { // Sell <= Buy
+                int deducted = sellData.deduct(buyData);
+                validator.recordTranscation(sellData.instrument, buyData.client, sellData.client, deducted);
+
+                if (sellData.isDepleted()) {
+                    sellBook.remove();
+                }
+                if (buyData.isDepleted()) {
+                    buyBook.remove();
+                }
+            } else {
+                // No possible match
                 return;
             }
         }
     }
 
-    private void sell(OrderData orderData) {
-        Optional<OrderData> data;
-        while ((data = getLargestBuyOrderPossible(orderData.price, orderData.isMarket())).isPresent()) {
-            var match = data.get();
-            int deducted = orderData.deduct(match);
-            validator.recordTranscation(match, deducted);
+    /// For testing
+    public void addBuyOrder(OrderData orderData) {
+        this.buyBook.add(orderData);
+    }
 
-            if (match.isDepleted()) {
-                sellBook.remove(match);
-            }
-            if (orderData.isDepleted()) {
-                return;
-            }
-        }
+    /// For testing
+    public void addSellOrder(OrderData orderData) {
+        this.sellBook.add(orderData);
+    }
+
+    public PriorityQueue<OrderData> getBuyBook() {
+        return buyBook;
+    }
+
+    public PriorityQueue<OrderData> getSellBook() {
+        return sellBook;
     }
 }

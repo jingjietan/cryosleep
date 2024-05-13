@@ -66,14 +66,13 @@ public class Validation implements Validator {
     }
 
     @Override
-    public void recordTranscation(OrderData orderData, int quantity) {
-        int q = quantity;
-        if (orderData.side == BuySell.Sell) {
-            q = -q;
-        }
-        var cip = new ClientInstrumentPair(orderData.orderID, orderData.instrument);
-        var prev = positionData.getOrDefault(cip, 0);
-        positionData.replace(cip, prev + q);
+    public void recordTranscation(String instrument, String buyer, String seller, int quantity) {
+        var buyerPair = new ClientInstrumentPair(buyer, instrument);
+        var sellerPair = new ClientInstrumentPair(seller, instrument);
+        var buyerPrev = positionData.getOrDefault(buyerPair, 0);
+        var sellerPrev = positionData.getOrDefault(sellerPair, 0);
+        positionData.replace(buyerPair, buyerPrev + quantity);
+        positionData.replace(sellerPair, sellerPrev - quantity);
     }
 
     public Map<String, ValidationErrors> getRejections() {
